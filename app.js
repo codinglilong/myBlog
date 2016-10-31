@@ -13,6 +13,9 @@ var session =require('express-session');//express session中间件
 var MongoStore=require('connect-mongo')(session);//mongo session中间件
 var mongoose = require('mongoose');
 
+var fs = require('fs');
+var accessLog = fs.createWriteStream('access.log', {flags: 'a'});
+var errorLog = fs.createWriteStream('error.log', {flags: 'a'});
 var app = express();// 生成一个express实例app
 
 app.set('port', process.env.PORT || 3000);
@@ -22,6 +25,8 @@ app.set('view engine', 'ejs');//设置视图模版引擎为ejs
 app.use(flash());
 app.use(favicon(path.join(__dirname, 'public/images', 'favicon.ico')));
 app.use(logger('dev'));//加载日志中间件
+app.use(logger({stream: accessLog}));
+
 app.use(bodyParser.json());//加载json的中间件
 app.use(bodyParser.urlencoded({ extended: false }));//加载解析urlencoded请求体的中间件
 app.use(cookieParser()); //加载解析cookie的中间件
@@ -40,6 +45,11 @@ app.use(session({
 }));
 
 app.use(express.static(path.join(__dirname, 'public')));//设置public文件夹为存放静态文件的文件夹
+app.use(function (err, req, res, next) {
+  var meta = '[' + new Date() + '] ' + req.url + '\n';
+  errorLog.write(meta + err.stack + '\n');
+  next();
+});
 
 routes(app);
 
