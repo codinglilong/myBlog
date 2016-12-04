@@ -3,6 +3,7 @@ var User = require('../models/user.js');
 var Post = require('../models/post.js');
 var multer = require("multer") //上传文件中间件
 var Comment = require('../models/comment.js');
+var passport = require('passport');
 
 var storage = multer.diskStorage({
     destination: function(req, file, cb) { //指定上传的文件所在的目录
@@ -106,6 +107,22 @@ module.exports = function(app) {
         });
 
     });
+    //这里我们可以直接使用 Express 的 session 功能，所以禁掉 Passport 的 session 功能
+    //Passport 默认会将取得的用户信息存储在 req.user 中而不是 req.session.user，为了保持兼容
+    //所以我们提取并序列化有用的数据保存到 req.session.user 中。
+    app.get("/login/github", passport.authenticate("github", {session: false}));
+    app.get("/login/github/callback", passport.authenticate("github", {
+      session: false,
+      failureRedirect: '/login',
+      successFlash: '登陆成功！'
+    }), function (req, res) {
+      req.session.user = {name: req.user.username, head: "https://gravatar.com/avatar/" + req.user._json.gravatar_id + "?s=48"};
+      res.redirect('/');
+    });
+
+
+
+
     app.get('/post', checkLogin);
     app.get('/post', function(req, res) {
         res.render('post', getStatus('发表', req));
